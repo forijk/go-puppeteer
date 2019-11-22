@@ -26,6 +26,9 @@ const printJuejinBooks = async (userName, password, sourceUrl, isLazyload = true
   if (!password) {
     throw new Error('请输入密码');
   }
+  if (!sourceUrl) {
+    throw new Error('请输入【我的收藏集】链接');
+  }
   try {
     const viewport = {
       width: 1376,
