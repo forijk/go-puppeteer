@@ -55,7 +55,7 @@ const printJuejinBooks = async (userName, password, saveDir = './books') => {
     const browser = await puppeteer.launch({
       // 关闭无头模式，方便我们看到整个无头浏览器执行的过程
       // 注意若调用了 Page.pdf 即保存为 pdf，则需要保持为无头模式
-      headless: false,
+      // headless: false
     });
 
     console.log('打开新页面');
@@ -120,16 +120,21 @@ const printJuejinBooks = async (userName, password, saveDir = './books') => {
         }).catch(function () {
           log('BAD', 'Lazy load failed due to an error while getting the scroll height.', 1);
         });
-
+        console.log("TCL: printJuejinBooks -> maxScroll", maxScroll)
 
         // how many times full scroll needs to be done
         var fullScrolls = Math.floor(maxScroll / viewport.height);
+        console.log("TCL: printJuejinBooks -> fullScrolls", fullScrolls)
 
         // amount left to get to the bottom of the page after doing the full scrolls
         var lastScroll = maxScroll % viewport.height;
+        console.log("TCL: printJuejinBooks -> lastScroll", lastScroll)
 
         // do full scrolls if there is any
         for (var i = 1; i <= fullScrolls; i++) {
+
+          console.log("TCL: printJuejinBooks -> i", i)
+
           await articlePage.evaluate((i, viewportHeight) => {
             return Promise.resolve(window.scrollTo(0, i * viewportHeight));
           }, i, viewport.height).catch(function () {
@@ -138,7 +143,7 @@ const printJuejinBooks = async (userName, password, saveDir = './books') => {
           });
 
           await articlePage.waitForNavigation({
-            'waitUntil': 'networkidle2',
+            // 'waitUntil': 'networkidle2',
             // 'networkIdleTimeout': 200
           }).catch(function () {
             result.status = 'BAD';
@@ -182,12 +187,12 @@ const printJuejinBooks = async (userName, password, saveDir = './books') => {
       const filePath = `${dirPath}/${fileName}`;
       mkdirp.sync(dirPath);
 
-      // await page.emulateMedia('screen');
-      // await articlePage.pdf({
-      //   path: filePath,
-      //   format: 'A4',
-      //   printBackground: true
-      // });
+      await page.emulateMedia('screen');
+      await articlePage.pdf({
+        path: filePath,
+        format: 'A4',
+        printBackground: true
+      });
       console.log(`保存成功: ${filePath}`);
       articlePage.close();
     }
