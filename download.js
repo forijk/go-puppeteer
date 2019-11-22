@@ -22,14 +22,34 @@ const printJuejinBooks = async (userName, password, saveDir = './books') => {
       lazyLoad: true
     }
     const result = {
-      status: null,
-      message: null
-    }
+      status: 'OK'
+    };
     // 设置统一的视窗大小
     const viewport = {
       width: 1376,
       height: 768
     };
+
+    /**
+     * Logs json to the console and if required terminates the process
+     *
+     * @param status
+     * @param message
+     * @param terminate
+     */
+    function log(status, message, terminate) {
+      result.status = status;
+
+      if (message) {
+        result.message = message;
+      }
+
+      console.log(result);
+
+      if (terminate) {
+        process.exit(terminate);
+      }
+    }
 
     console.log('启动浏览器');
     const browser = await puppeteer.launch({
@@ -92,21 +112,25 @@ const printJuejinBooks = async (userName, password, saveDir = './books') => {
       });
 
       if (config.lazyLoad) {
-        var maxScroll = await articlePage.evaluate(function () {
-          return Promise.resolve(Math.max(document.body.scrollHeight, document.body.offsetHeight,
-            document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight) - window.innerHeight);
+        var maxScroll = await articlePage.evaluate(() => {
+          return Promise.resolve(
+            Math.max(document.body.scrollHeight, document.body.offsetHeight,
+              document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight) - window.innerHeight
+          );
         }).catch(function () {
           log('BAD', 'Lazy load failed due to an error while getting the scroll height.', 1);
         });
 
-        var fullScrolls = Math.floor(maxScroll / viewport.height);
+
         // how many times full scroll needs to be done
-        var lastScroll = maxScroll % viewport.height;
+        var fullScrolls = Math.floor(maxScroll / viewport.height);
+
         // amount left to get to the bottom of the page after doing the full scrolls
+        var lastScroll = maxScroll % viewport.height;
 
         // do full scrolls if there is any
         for (var i = 1; i <= fullScrolls; i++) {
-          await articlePage.evaluate(function (i, viewportHeight) {
+          await articlePage.evaluate((i, viewportHeight) => {
             return Promise.resolve(window.scrollTo(0, i * viewportHeight));
           }, i, viewport.height).catch(function () {
             result.status = 'BAD';
@@ -124,7 +148,7 @@ const printJuejinBooks = async (userName, password, saveDir = './books') => {
 
         // do last scroll if there is any
         if (lastScroll > 0) {
-          await articlePage.evaluate(function (maxScroll) {
+          await articlePage.evaluate(maxScroll => {
             return Promise.resolve(window.scrollTo(0, maxScroll + 25));
           }, maxScroll).catch(function () {
             result.status = 'BAD';
