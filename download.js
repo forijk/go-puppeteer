@@ -1,7 +1,10 @@
 /**
- * 下载掘金【我的收藏集】文章为 PDF 文件
- * 含对懒加载图片 lazyload 的处理，默认开启
- * SOURCE_URL 为【我的收藏集】链接
+ * 下载掘金【我的收藏集】文章为 PDF 文件（含文章图片）
+ * USER: 登录用户
+ * PASSWORD: 用户密码
+ * SOURCE_URL: 浏览器登录后获取的【我的收藏集】链接
+ * IS_LAZYLOAD: 是否开启对懒加载图片(lazyload)的处理, 默认开启
+ * SAVE_DIR: PDF 文件存储路径
  */
 const puppeteer = require('puppeteer');
 const mkdirp = require('mkdirp');
@@ -9,15 +12,14 @@ const axios = require('axios');
 const ProgressBar = require('progress');
 
 const BASE_URL = 'https://juejin.im';
-const SOURCE_URL = 'https://juejin.im/collection/5dd56bd0e51d4505fd7facd2';
 
+// 调试
+// process.on('unhandledRejection', (reason, p) => {
+//   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+//   // application specific logging, throwing an error, or other logic here
+// });
 
-process.on('unhandledRejection', (reason, p) => {
-  console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
-  // application specific logging, throwing an error, or other logic here
-});
-
-const printJuejinBooks = async (userName, password, isLazyload = true, saveDir = './books') => {
+const printJuejinBooks = async (userName, password, sourceUrl, isLazyload = true, saveDir = './books') => {
   if (!userName) {
     throw new Error('请输入用户名');
   }
@@ -25,24 +27,17 @@ const printJuejinBooks = async (userName, password, isLazyload = true, saveDir =
     throw new Error('请输入密码');
   }
   try {
-    // 设置统一的视窗大小
     const viewport = {
       width: 1376,
       height: 768
     };
 
     console.log('启动浏览器');
-    const browser = await puppeteer.launch({
-      // 关闭无头模式，便于看到整个无头浏览器的执行过程
-      // 注意若调用了 Page.pdf 即保存为 pdf，则需要保持为无头模式
-      // headless: false
-    });
+    const browser = await puppeteer.launch();
 
     console.log('打开新页面');
     const page = await browser.newPage();
     page.setViewport(viewport);
-
-    console.log('进入登录地址');
 
     const postData = {
       password,
@@ -58,13 +53,13 @@ const printJuejinBooks = async (userName, password, isLazyload = true, saveDir =
       headers
     }).then(res => {
       console.log('登录成功!');
-      console.log('---> 掘金用户名: ', res.data.user && res.data.user.username);
+      console.log('---> 用户名: ', res.data.user && res.data.user.username);
     }).catch(err => {
       console.log('登录失败: ', err);
       return
     })
-
-    await page.goto(SOURCE_URL);
+    console.log('进入【我的收藏集】');
+    await page.goto(sourceUrl);
 
     await page.waitForSelector('.collection-view');
     const books = await page.$eval('.collection-view', element => {
@@ -91,7 +86,7 @@ const printJuejinBooks = async (userName, password, isLazyload = true, saveDir =
       await articlePage.goto(`${BASE_URL}${article.href}`);
 
       if (isLazyload) {
-        console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+        console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
         console.log('开始图片懒加载识别, 请稍后...');
         var maxScroll = await articlePage.evaluate(() => {
           return Promise.resolve(
@@ -175,12 +170,13 @@ const printJuejinBooks = async (userName, password, isLazyload = true, saveDir =
 
 const USER = process.argv[2];
 const PASSWORD = process.argv[3];
-const SAVE_DIR = process.argv[4];
-const IS_LAZYLOAD = process.argv[5];
+const SOURCE_URL = process.argv[4];
+const SAVE_DIR = process.argv[5];
+const IS_LAZYLOAD = process.argv[6];
 
-if (!USER || !PASSWORD) {
-  console.log('invalid user or password');
+if (!USER || !PASSWORD || !SOURCE_URL) {
+  console.log('Invalid user or password or source url.');
   process.exit();
 }
 
-printJuejinBooks(USER, PASSWORD, IS_LAZYLOAD, SAVE_DIR);
+printJuejinBooks(USER, PASSWORD, SOURCE_URL, IS_LAZYLOAD, SAVE_DIR);
